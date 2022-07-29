@@ -29,7 +29,7 @@ class Deterministic(RandomGenerator):
 
 def main():
     generator = Exponential(1, 1)
-    for _ in range(0,10):
+    for _ in range(10):
         print(generator.next())
 
 if __name__ == "__main__":
