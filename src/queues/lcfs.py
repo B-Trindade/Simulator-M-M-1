@@ -10,6 +10,6 @@ class LCFSQueue:
         return len(self.list)
 
     # Insere no início da lista (pilha)
-    def insert(self, data):
-        self.list.insert(0, data)
+    def add(self, data):
+        self.list.append(data)
         return

@@ -10,6 +10,6 @@ class FCFSQueue:
         return len(self.list)
 
     # Insere no final da lista (fila)
-    def insert(self, data):
+    def add(self, data):
         self.list.append(data)
         return

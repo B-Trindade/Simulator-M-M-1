@@ -1,5 +1,13 @@
+from enum import Enum
+
+
+class EventType(Enum):
+    Arrival = 1
+    Departure = 2
+
+
 class Event:
-    def __init__(self, time, type):
+    def __init__(self, time, type: EventType):
         self.time = time
         self.event_type = type
 
@@ -19,8 +27,8 @@ class Event_list:
         self.length = 0
 
     # Insere eventos mantendo ordem crescente de tempo
-    def insert_event(self, NewEvent: Event):
-        self.length = self.length + 1
+    def insert(self, NewEvent: Event):
+        self.length += 1
         NewNode = Node(NewEvent)
 
         if self.head is None:
@@ -50,9 +58,11 @@ class Event_list:
         return self.head.data
 
     def pop(self) -> Event:
-        self.length = self.length - 1
+        self.length -= 1
         val = self.head.data
         next = self.head.next
+        if next is not None:
+            next.prev = None
 
         del(self.head)
         self.head = next
