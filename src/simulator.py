@@ -91,9 +91,10 @@ class Simulator:
             if next_event.event_type == EventType.Departure:
                 departures += 1
                 # Calcula o tempo da próxima saída
-                departure_id = self.queue.next()
-                print(
-                    f"Saiu o id {departure_id} no tempo {round(self.time, 3)}")
+                # departure_id = self.queue.next().id
+                leaving_client = self.queue.next()
+                leaving_client.set_exit_time(self.time)
+                print(f"Saiu o id {leaving_client.id} no tempo {round(leaving_client.exit_time, 3)}")
 
                 if self.queue.length() > 0:
                     self.add_event(EventType.Departure)
