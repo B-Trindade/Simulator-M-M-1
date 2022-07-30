@@ -5,6 +5,22 @@ from queues.fcfs import FCFSQueue
 from queues.lcfs import LCFSQueue
 from sys import argv, exit
 
+class Client:
+    def __init__(self, id, entry_time):
+        self.id = id
+        self.entry_time = entry_time
+        self.wait_time = 0
+        self.exit_time = 0
+
+    def set_entry_time(self, num: float):
+        self.entry_time = num
+        
+    def set_wait_time(self, num: float):
+        self.wait_time = num
+
+    def set_exit_time(self, num: float):
+        self.exit_time = num
+
 
 class Simulator:
     def __init__(self, argv):
@@ -65,7 +81,8 @@ class Simulator:
                     self.add_event(EventType.Departure)
 
                 # Insere na fila
-                self.queue.add(id)
+                self.queue.add(Client(id, self.time))
+                # self.queue.add(id)
 
                 # Se o event sendo tratado é uma chegada, calcula o tempo da próxima chegada
                 self.add_event(EventType.Arrival)

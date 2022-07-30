@@ -7,9 +7,9 @@ class EventType(Enum):
 
 
 class Event:
-    def __init__(self, time, type: EventType):
+    def __init__(self, time, event_type: EventType):
         self.time = time
-        self.event_type = type
+        self.event_type = event_type
 
 
 class Node:
