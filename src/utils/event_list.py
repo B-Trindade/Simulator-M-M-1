@@ -19,7 +19,7 @@ class Node:
         self.prev = None
 
 
-class Event_list:
+class EventList:
     '''Lista duplamente encadeada, mantém a lista de eventos em ordem crescente'''
 
     def __init__(self):
@@ -78,7 +78,7 @@ class Event_list:
 
 
 def exemplo():
-    eventos = Event_list()
+    eventos = EventList()
     eventos.insert_event(Event(4, "um"))
     eventos.insert_event(Event(5, "um"))
     eventos.insert_event(Event(2, "um"))
