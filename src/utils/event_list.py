@@ -7,13 +7,13 @@ class EventType(Enum):
 
 
 class Event:
-    def __init__(self, time, event_type: EventType):
+    def __init__(self, time: float, event_type: EventType):
         self.time = time
         self.event_type = event_type
 
 
 class Node:
-    def __init__(self, data):
+    def __init__(self, data: Event):
         self.data = data
         self.next = None
         self.prev = None
@@ -27,7 +27,7 @@ class EventList:
         self.length = 0
 
     # Insere eventos mantendo ordem crescente de tempo
-    def insert(self, NewEvent: Event):
+    def insert(self, NewEvent: Event) -> None:
         self.length += 1
         NewNode = Node(NewEvent)
 
@@ -52,7 +52,6 @@ class EventList:
 
         NewNode.prev = last
         last.next = NewNode
-        return
 
     def get_first(self) -> Event:
         return self.head.data
@@ -70,7 +69,7 @@ class EventList:
         return val
 
     # Printa todos os elementos da lista
-    def print_all(self):
+    def print_all(self) -> None:
         node = self.head
         while (node is not None):
             print(f"{node.data.time} - {node.data.event_type}")
@@ -79,20 +78,21 @@ class EventList:
 
 def exemplo():
     eventos = EventList()
-    eventos.insert_event(Event(4, "um"))
-    eventos.insert_event(Event(5, "um"))
-    eventos.insert_event(Event(2, "um"))
-    eventos.insert_event(Event(1, "um"))
-    eventos.insert_event(Event(6, "um"))
-    eventos.insert_event(Event(7, "dois"))
-    eventos.insert_event(Event(1.8, "dois"))
+    eventos.insert(Event(4, "um"))
+    eventos.insert(Event(5, "um"))
+    eventos.insert(Event(2, "um"))
+    eventos.insert(Event(1, "um"))
+    eventos.insert(Event(6, "um"))
+    eventos.insert(Event(7, "dois"))
+    eventos.insert(Event(1.8, "dois"))
 
     eventos.print_all()
     print()
 
-    while eventos.length > 0:
+    while eventos.length:
         print("Pop: ", eventos.pop().time)
 
 
 if __name__ == "__main__":
     exemplo()
+
