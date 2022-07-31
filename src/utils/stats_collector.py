@@ -1,9 +1,8 @@
-from typing import Tuple
-
 
 class Client:
-    def __init__(self, id, entry_time):
+    def __init__(self, id, entry_time, batch):
         self.id = id
+        self.batch_id = batch
         self.entry_time = entry_time
         self.wait_time = 0
         self.exit_time = 0

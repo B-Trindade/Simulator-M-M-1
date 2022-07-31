@@ -24,6 +24,7 @@ class Simulator:
         print(f"seed: {self.seed}\n")
 
         self.time = 0
+        self.current_client = None   # current_client indica o cliente atualmente em execução
 
         self.event_list = EventList()
         self.stats_collector = StatsCollector()
@@ -47,12 +48,12 @@ class Simulator:
         else:
             self.event_list.insert(Event(self.next_departure(), event_type))
 
-    def run(self):
+    def run(self, batch: int=0):
         departures = 0
         id = 0
         # Calcula a primeira chegada antes do loop
         self.add_event(EventType.Arrival)
-        current_client = None   # current_client indica o cliente atualmente em execução
+        self.current_client = None   # current_client indica o cliente atualmente em execução
 
         while departures < self.num_customers:
             # Pega o próximo evento da lista de eventos
@@ -67,23 +68,23 @@ class Simulator:
                 id += 1
 
                 # Se a fila estiver vazia, chegada vai direto para execução
-                if current_client is None:
+                if self.current_client is None:
                     if(environ.get("DEBUG") == "true"):
                         print(
                             f"Entrou o id {id} no tempo {round(self.time, 3)} - FILA DE ESPERA VAZIA")
 
                     # Calcula a saída do cliente que acabou de chegar
                     self.add_event(EventType.Departure)
-                    current_client = Client(id, self.time)
+                    self.current_client = Client(id, self.time, batch)
                     # Tempo de espera = 0 pois já entrou direto em execução
-                    current_client.set_wait_time(0)
+                    self.current_client.set_wait_time(0)
 
                 # Se não, insere na fila de espera para ser executado no futuro
                 else:
                     if(environ.get("DEBUG") == "true"):
                         print(
                             f"Entrou o id {id} no tempo {round(self.time, 3)} - Encontrou {self.queue.length()} pessoas na fila de espera")
-                    self.queue.add(Client(id, self.time))
+                    self.queue.add(Client(id, self.time, batch))
 
                 # Se o event sendo tratado é uma chegada, calcula o tempo da próxima chegada
                 self.add_event(EventType.Arrival)
@@ -91,7 +92,7 @@ class Simulator:
             # Trata eventos de saída
             if next_event.event_type == EventType.Departure:
                 departures += 1
-                leaving_client = current_client
+                leaving_client = self.current_client
                 leaving_client.set_exit_time(self.time)
 
                 # Para cálculos da média de Ns, vemos como ficará a fila de espera
@@ -99,7 +100,8 @@ class Simulator:
                 # Fila vazia → utilização 0
                 # Fila não-vazia → utilização 1
                 # NOTA: Este valor equivale a rho (ρ)
-                self.stats_collector.update_utilization(self.queue.length())
+                if leaving_client.batch_id == batch:
+                    self.stats_collector.update_utilization(self.queue.length())
 
                 if(environ.get("DEBUG") == "true"):
                     print(
@@ -110,41 +112,48 @@ class Simulator:
 
                 # Caso onde ainda há clientes na fila de espera para serem processados após a saída
                 if self.queue.length() > 0:
-                    current_client = self.queue.next()
-                    current_client.set_wait_time(
-                        self.time - current_client.entry_time)
+                    self.current_client = self.queue.next()
+                    self.current_client.set_wait_time(
+                        self.time - self.current_client.entry_time)
 
                     # Calcula o tempo da próxima saída
                     self.add_event(EventType.Departure)
                     if(environ.get("DEBUG") == "true"):
                         print(
-                            f"Cliente {current_client.id} entrou em execução no tempo {round(self.time, 3)}\n")
+                            f"Cliente {self.current_client.id} entrou em execução no tempo {round(self.time, 3)}\n")
 
                 # Caso onde após saída, o sistema fica vazio
                 else:
-                    current_client = None
+                    self.current_client = None
                     if(environ.get("DEBUG") == "true"):
                         print()
 
                 # Coleção de dados de saída
                 # Coleta o tamanho da fila de espera e o tempo de espera do
                 # cliente que acabou de sair
-                self.stats_collector.update_departures(
-                    leaving_client, self.queue.length())
+                if leaving_client.batch_id == batch:
+                    self.stats_collector.update_departures(
+                        leaving_client, self.queue.length())
 
-        return self.stats_collector
+        return self.stats_collector, batch+1 #, self.current_client
 
 
 if __name__ == "__main__":
     a = Simulator(argv)
-    stats = a.run()
-    print(f"E[W]: {round(stats.get_average_wait(), 3)}")
-    print(f"E[Nq]: {round(stats.get_average_queue_size(), 3)}")
-    print(f"E[Ns]: {round(stats.get_average_utilization(), 3)}\n")
 
-    print("Little:")
-    print(f"E[Nq] = λE[W]")
-    print(
-        f"{round(stats.get_average_queue_size(), 3)} = {argv[3]}*{round(stats.get_average_wait(), 3)}")
-    print(
-        f"{round(stats.get_average_queue_size(), 3)} = {round(float(argv[3])*stats.get_average_wait(), 3)}")
+    next_batch = 0
+    max_batches = 1
+    client = None
+    while next_batch < max_batches:
+        stats, next_batch = a.run(batch=next_batch)
+        print(f"\n\nCURRENT BATCH: {next_batch}")
+        print(f"E[W]: {round(stats.get_average_wait(), 3)}")
+        print(f"E[Nq]: {round(stats.get_average_queue_size(), 3)}")
+        print(f"E[Ns]: {round(stats.get_average_utilization(), 3)}\n")
+
+        print("Little:")
+        print(f"E[Nq] = λE[W]")
+        print(
+            f"{round(stats.get_average_queue_size(), 3)} = {argv[3]}*{round(stats.get_average_wait(), 3)}")
+        print(
+            f"{round(stats.get_average_queue_size(), 3)} = {round(float(argv[3])*stats.get_average_wait(), 3)}")
