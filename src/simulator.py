@@ -1,14 +1,15 @@
-from utils import random_generator
+from utils.random_generator import Exponential
 from utils.event_list import EventList, Event, EventType
 from utils.stats_collector import Client, StatsCollector
 from queues.fcfs import FCFSQueue
 from queues.lcfs import LCFSQueue
 from sys import argv, exit
 from os import environ
+from typing import List, Tuple
 
 
 class Simulator:
-    def __init__(self, argv):
+    def __init__(self, argv: List):
         if len(argv)-1 not in (3, 4):
             print("Número errado de argumentos :(")
             exit(1)
@@ -31,24 +32,24 @@ class Simulator:
 
         self.queue = FCFSQueue() if self.queue_type.lower() == "fcfs" else LCFSQueue()
 
-        self.arrival_generator = random_generator.Exponential(
+        self.arrival_generator = Exponential(
             self.seed, self.rho)
-        self.departure_generator = random_generator.Exponential(self.seed, 1)
+        self.departure_generator = Exponential(self.seed, 1)
 
-    def next_arrival(self):
+    def next_arrival(self) -> float:
         return self.time + self.arrival_generator.next()
 
-    def next_departure(self):
+    def next_departure(self) -> float:
         return self.time + self.departure_generator.next()
 
-    def add_event(self, event_type: EventType):
+    def add_event(self, event_type: EventType) -> None:
         '''Calcula o tempo do próximo evento e insere na fila de eventos'''
         if event_type == EventType.Arrival:
             self.event_list.insert(Event(self.next_arrival(), event_type))
         else:
             self.event_list.insert(Event(self.next_departure(), event_type))
 
-    def run(self, batch: int=0):
+    def run(self, batch: int=0) -> Tuple[StatsCollector, int]:
         departures = 0
         id = 0
         # Calcula a primeira chegada antes do loop

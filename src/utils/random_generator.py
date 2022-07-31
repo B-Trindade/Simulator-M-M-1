@@ -1,6 +1,5 @@
-from random import random
-from random import seed as set_seed
-import math
+from random import random, seed as set_seed
+from math import log
 
 
 class RandomGenerator:
@@ -27,7 +26,7 @@ class Exponential(RandomGenerator):
     de acordo com a fórmula ln(1-rand)/-λ'''
 
     def next(self) -> float:
-        return math.log(1-random())/-self.rate
+        return log(1-random())/-self.rate
 
 
 class Deterministic(RandomGenerator):

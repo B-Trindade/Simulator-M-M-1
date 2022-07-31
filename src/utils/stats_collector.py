@@ -1,19 +1,19 @@
 
 class Client:
-    def __init__(self, id, entry_time, batch):
+    def __init__(self, id: int, entry_time: float, batch: int):
         self.id = id
         self.batch_id = batch
         self.entry_time = entry_time
         self.wait_time = 0
         self.exit_time = 0
 
-    def set_entry_time(self, num: float):
+    def set_entry_time(self, num: float) -> None:
         self.entry_time = num
 
-    def set_wait_time(self, num: float):
+    def set_wait_time(self, num: float) -> None:
         self.wait_time = num
 
-    def set_exit_time(self, num: float):
+    def set_exit_time(self, num: float) -> None:
         self.exit_time = num
 
 class StatsCollector:
@@ -38,5 +38,5 @@ class StatsCollector:
     def get_average_queue_size(self) -> float:
         return self.total_queue_size/self.total_samples
 
-    def get_average_utilization(self):
+    def get_average_utilization(self) -> float:
         return self.server_busy/self.total_samples
