@@ -6,6 +6,7 @@ from queues.lcfs import LCFSQueue
 from sys import argv, exit
 from os import environ
 from typing import List, Tuple
+from datetime import datetime
 
 
 class Simulator:
@@ -49,12 +50,15 @@ class Simulator:
         else:
             self.event_list.insert(Event(self.next_departure(), event_type))
 
-    def run(self, batch: int=0) -> Tuple[StatsCollector, int]:
+    def run(self, client, batch: int=0) -> Tuple[StatsCollector, int, Client]:
+        self.stats_collector = StatsCollector()
+        self.time = 0
         departures = 0
         id = 0
         # Calcula a primeira chegada antes do loop
-        self.add_event(EventType.Arrival)
-        self.current_client = None   # current_client indica o cliente atualmente em execução
+        if batch == 0:
+            self.add_event(EventType.Arrival)
+        self.current_client = client   # current_client indica o cliente atualmente em execução
 
         while departures < self.num_customers:
             # Pega o próximo evento da lista de eventos
@@ -92,7 +96,6 @@ class Simulator:
 
             # Trata eventos de saída
             if next_event.event_type == EventType.Departure:
-                departures += 1
                 leaving_client = self.current_client
                 leaving_client.set_exit_time(self.time)
 
@@ -102,6 +105,7 @@ class Simulator:
                 # Fila não-vazia → utilização 1
                 # NOTA: Este valor equivale a rho (ρ)
                 if leaving_client.batch_id == batch:
+                    departures += 1
                     self.stats_collector.update_utilization(self.queue.length())
 
                 if(environ.get("DEBUG") == "true"):
@@ -136,25 +140,34 @@ class Simulator:
                     self.stats_collector.update_departures(
                         leaving_client, self.queue.length())
 
-        return self.stats_collector, batch+1 #, self.current_client
+        return self.stats_collector, batch+1, self.current_client
 
 
 if __name__ == "__main__":
+    inicio = datetime.now()
     a = Simulator(argv)
-
     next_batch = 0
-    max_batches = 1
+    max_batches = 3200
     client = None
-    while next_batch < max_batches:
-        stats, next_batch = a.run(batch=next_batch)
-        print(f"\n\nCURRENT BATCH: {next_batch}")
-        print(f"E[W]: {round(stats.get_average_wait(), 3)}")
-        print(f"E[Nq]: {round(stats.get_average_queue_size(), 3)}")
-        print(f"E[Ns]: {round(stats.get_average_utilization(), 3)}\n")
+    file_name = f"results_{'-'.join(argv[1:])}".replace('.', ',')
+    with open(f"{file_name}.csv", "w") as file:
+        file.write("Batch, E[W], E[Nq], E[Ns]\n")
+        while next_batch < max_batches:
+            stats, next_batch, client = a.run(client, batch=next_batch)
+            # print(f"\n\nCURRENT BATCH: {next_batch}")
+            # print(f"E[W]: {round(stats.get_average_wait(), 3)}")
+            # print(f"E[Nq]: {round(stats.get_average_queue_size(), 3)}")
+            # print(f"E[Ns]: {round(stats.get_average_utilization(), 3)}\n")
 
-        print("Little:")
-        print(f"E[Nq] = λE[W]")
-        print(
-            f"{round(stats.get_average_queue_size(), 3)} = {argv[3]}*{round(stats.get_average_wait(), 3)}")
-        print(
-            f"{round(stats.get_average_queue_size(), 3)} = {round(float(argv[3])*stats.get_average_wait(), 3)}")
+            # print("Little:")
+            # print(f"E[Nq] = λE[W]")
+            # print(
+            #     f"{round(stats.get_average_queue_size(), 3)} = {argv[3]}*{round(stats.get_average_wait(), 3)}")
+            # print(
+            #     f"{round(stats.get_average_queue_size(), 3)} = {round(float(argv[3])*stats.get_average_wait(), 3)}")
+            file.write(
+                f"{next_batch}, {stats.get_average_wait()}, "
+                f"{stats.get_average_queue_size()}, {stats.get_average_utilization()}\n"
+            )
+
+    print(f'{(datetime.now() - inicio).total_seconds()}s')
