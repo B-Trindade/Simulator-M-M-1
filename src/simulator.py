@@ -24,7 +24,7 @@ class Simulator:
         print(f"seed: {self.seed}\n")
 
         self.time = 0
-        
+
         self.event_list = EventList()
         self.stats_collector = StatsCollector()
 
@@ -50,7 +50,8 @@ class Simulator:
     def run(self):
         departures = 0
         id = 0
-        self.add_event(EventType.Arrival) # Calcula a primeira chegada antes do loop
+        # Calcula a primeira chegada antes do loop
+        self.add_event(EventType.Arrival)
         current_client = None   # current_client indica o cliente atualmente em execução
 
         while departures < self.num_customers:
@@ -74,7 +75,8 @@ class Simulator:
                     # Calcula a saída do cliente que acabou de chegar
                     self.add_event(EventType.Departure)
                     current_client = Client(id, self.time)
-                    current_client.set_wait_time(0) # Tempo de espera = 0 pois já entrou direto em execução
+                    # Tempo de espera = 0 pois já entrou direto em execução
+                    current_client.set_wait_time(0)
 
                 # Se não, insere na fila de espera para ser executado no futuro
                 else:
@@ -142,5 +144,7 @@ if __name__ == "__main__":
 
     print("Little:")
     print(f"E[Nq] = λE[W]")
-    print(f"{round(stats.get_average_queue_size(), 3)} = {argv[3]}*{round(stats.get_average_wait(), 3)}")
-    print(f"{round(stats.get_average_queue_size(), 3)} = {round(float(argv[3])*stats.get_average_wait(), 3)}")
+    print(
+        f"{round(stats.get_average_queue_size(), 3)} = {argv[3]}*{round(stats.get_average_wait(), 3)}")
+    print(
+        f"{round(stats.get_average_queue_size(), 3)} = {round(float(argv[3])*stats.get_average_wait(), 3)}")
