@@ -1,3 +1,4 @@
+from enum import Enum
 from utils.random_generator import Exponential
 from utils.event_list import EventList, Event, EventType
 from utils.stats_collector import Client, StatsCollector
@@ -7,6 +8,11 @@ from sys import argv, exit
 from os import environ
 from typing import List, Tuple
 from datetime import datetime
+
+
+class Phase(Enum):
+    Transient = 0
+    Stable = 1
 
 
 class Simulator:
@@ -50,17 +56,27 @@ class Simulator:
         else:
             self.event_list.insert(Event(self.next_departure(), event_type))
 
-    def run(self, client, batch: int=0) -> Tuple[StatsCollector, int, Client]:
+    def run(self, client, batch: int = 0) -> Tuple[StatsCollector, int, Client]:
         self.stats_collector = StatsCollector()
         self.time = 0
-        departures = 0
+        stable_departures = 0
+        total_departures = 0
         id = 0
+
+        state = Phase.Stable
+        # Médias relativas à fase transiente
+        total_departure_time = 0
+        avg_departure_time_samples = 0
+        avg_departure_times = []
+
         # Calcula a primeira chegada antes do loop
         if batch == 0:
+            state = Phase.Transient
             self.add_event(EventType.Arrival)
-        self.current_client = client   # current_client indica o cliente atualmente em execução
+        # current_client indica o cliente atualmente em execução
+        self.current_client = client
 
-        while departures < self.num_customers:
+        while stable_departures < self.num_customers:
             # Pega o próximo evento da lista de eventos
             next_event = self.event_list.pop()
 
@@ -99,16 +115,19 @@ class Simulator:
                 leaving_client = self.current_client
                 leaving_client.set_exit_time(self.time)
 
+                total_departures += 1
+
                 # Para cálculos da média de Ns, vemos como ficará a fila de espera
                 # após a saída do cliente atual:
                 # Fila vazia → utilização 0
                 # Fila não-vazia → utilização 1
                 # NOTA: Este valor equivale a rho (ρ)
-                if leaving_client.batch_id == batch:
-                    departures += 1
-                    self.stats_collector.update_utilization(self.queue.length())
+                if leaving_client.batch_id == batch and state == Phase.Stable:
+                    stable_departures += 1
+                    self.stats_collector.update_utilization(
+                        self.queue.length())
 
-                if(environ.get("DEBUG") == "true"):
+                if environ.get("DEBUG") == "true":
                     print(
                         f"Saiu o id {leaving_client.id} no tempo {round(leaving_client.exit_time, 3)}")
                     print(f"Entry - {round(leaving_client.entry_time, 3)}")
@@ -136,9 +155,35 @@ class Simulator:
                 # Coleção de dados de saída
                 # Coleta o tamanho da fila de espera e o tempo de espera do
                 # cliente que acabou de sair
-                if leaving_client.batch_id == batch:
+                if leaving_client.batch_id == batch and state == Phase.Stable:
                     self.stats_collector.update_departures(
                         leaving_client, self.queue.length())
+
+                # Durante a fase transiente, é repetidamente calculada a média do tempo de espera
+                # das últimas 10 mil saídas. Após termos as últimas 10 médias salvas,
+                # calculamos a diferença entre a média das duas médias mais recentes com as
+                # médias restantes. Se a diferença der menor que 1%, a fase transiente é encerrada.
+                # Se não, continuamos o cálculo a cada média nova calculada, mantendo sempre as 10 últimas.
+                if state == Phase.Transient:
+                    total_departure_time += leaving_client.wait_time
+                    avg_departure_time_samples += 1
+
+                    if avg_departure_time_samples == 10000:
+                        last_averages = [total_departure_time/avg_departure_time_samples] + (
+                            [avg_departure_times.pop()] if len(avg_departure_times) > 0 else [])
+                        avg_departure = sum(last_averages)/len(last_averages)
+                        if len(avg_departure_times) >= 9 and avg_departure >= 0.99*sum(avg_departure_times)/(len(avg_departure_times)) and avg_departure <= 1.01*sum(avg_departure_times)/(len(avg_departure_times)):
+                            # if total_departures >= 100000:
+                            state = Phase.Stable
+                            print(
+                                f"Fase transiente acabou após {total_departures} saídas\n")
+                        else:
+                            avg_departure_times.extend(last_averages[::-1])
+                            if len(avg_departure_times) > 10:
+                                avg_departure_times.pop(0)
+
+                        total_departure_time = 0
+                        avg_departure_time_samples = 0
 
         return self.stats_collector, batch+1, self.current_client
 
@@ -147,10 +192,14 @@ if __name__ == "__main__":
     inicio = datetime.now()
     a = Simulator(argv)
     next_batch = 0
-    max_batches = 3200
-    client = None
+    max_batches = 100
+
+    total_wait = 0
+    total_queue = 0
+
     file_name = f"results_{'-'.join(argv[1:])}".replace('.', ',')
     with open(f"{file_name}.csv", "w") as file:
+        client = None
         file.write("Batch, E[W], E[Nq], E[Ns]\n")
         while next_batch < max_batches:
             stats, next_batch, client = a.run(client, batch=next_batch)
@@ -164,10 +213,23 @@ if __name__ == "__main__":
             # print(
             #     f"{round(stats.get_average_queue_size(), 3)} = {argv[3]}*{round(stats.get_average_wait(), 3)}")
             # print(
-            #     f"{round(stats.get_average_queue_size(), 3)} = {round(float(argv[3])*stats.get_average_wait(), 3)}")
+            #     f"{round(stats.get_average_queue_size(), 3)} = {round(float(argv[3])*stats.get_average_wait(), 3)}\n")
+            total_wait += stats.get_average_wait()
+            total_queue += stats.get_average_queue_size()
             file.write(
-                f"{next_batch}, {stats.get_average_wait()}, "
-                f"{stats.get_average_queue_size()}, {stats.get_average_utilization()}\n"
+                f"{next_batch},{stats.get_average_wait()},"
+                f"{stats.get_average_queue_size()},{stats.get_average_utilization()}\n"
             )
+
+    print("Médias das rodadas:")
+    print(f"E[W] = {round(total_wait/max_batches, 3)}")
+    print(f"E[Nq] = {round(total_queue/max_batches, 3)}\n")
+
+    print("Little:")
+    print(f"E[Nq] = λE[W]")
+    print(
+        f"{round(total_queue/max_batches, 3)} = {argv[3]}*{round(total_wait/max_batches, 3)}")
+    print(
+        f"{round(total_queue/max_batches, 3)} = {round(float(argv[3])*(total_wait/max_batches), 3)}\n")
 
     print(f'{(datetime.now() - inicio).total_seconds()}s')
