@@ -198,7 +198,7 @@ if __name__ == "__main__":
     total_queue = 0
 
     file_name = f"results_{'-'.join(argv[1:])}".replace('.', ',')
-    with open(f"{file_name}.csv", "w") as file:
+    with open(f"data/{file_name}.csv", "w") as file:
         client = None
         file.write("Batch, E[W], E[Nq], E[Ns]\n")
         while next_batch < max_batches:
