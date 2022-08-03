@@ -159,31 +159,16 @@ class Simulator:
                     self.stats_collector.update_departures(
                         leaving_client, self.queue.length())
 
-                # Durante a fase transiente, é repetidamente calculada a média do tempo de espera
-                # das últimas 10 mil saídas. Após termos as últimas 10 médias salvas,
-                # calculamos a diferença entre a média das duas médias mais recentes com as
-                # médias restantes. Se a diferença der menor que 1%, a fase transiente é encerrada.
-                # Se não, continuamos o cálculo a cada média nova calculada, mantendo sempre as 10 últimas.
+                # Encerramos a fase transiente dependendo do valor de ρ e do
+                # número de saídas durante a fase transiente
                 if state == Phase.Transient:
-                    total_departure_time += leaving_client.wait_time
-                    avg_departure_time_samples += 1
+                    if (self.rho <= 0.2 and total_departures >= 150000) or \
+                        (0.2 < self.rho <= 0.4 and total_departures >= 152000) or \
+                        (0.4 < self.rho <= 0.6 and total_departures >= 160000) or \
+                        (0.6 < self.rho <= 0.8 and total_departures >= 205000) or \
+                        (self.rho > 0.8 and total_departures >= 303000):
+                        state = Phase.Stable
 
-                    if avg_departure_time_samples == 10000:
-                        last_averages = [total_departure_time/avg_departure_time_samples] + (
-                            [avg_departure_times.pop()] if len(avg_departure_times) > 0 else [])
-                        avg_departure = sum(last_averages)/len(last_averages)
-                        if len(avg_departure_times) >= 9 and avg_departure >= 0.99*sum(avg_departure_times)/(len(avg_departure_times)) and avg_departure <= 1.01*sum(avg_departure_times)/(len(avg_departure_times)):
-                            # if total_departures >= 100000:
-                            state = Phase.Stable
-                            print(
-                                f"Fase transiente acabou após {total_departures} saídas\n")
-                        else:
-                            avg_departure_times.extend(last_averages[::-1])
-                            if len(avg_departure_times) > 10:
-                                avg_departure_times.pop(0)
-
-                        total_departure_time = 0
-                        avg_departure_time_samples = 0
 
         return self.stats_collector, batch+1, self.current_client
 
@@ -192,7 +177,7 @@ if __name__ == "__main__":
     inicio = datetime.now()
     a = Simulator(argv)
     next_batch = 0
-    max_batches = 100
+    max_batches = 3200 # Número de rodadas a serem executadas pelo método batch
 
     total_wait = 0
     total_queue = 0
