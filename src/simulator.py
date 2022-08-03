@@ -21,15 +21,16 @@ class Simulator:
             print("Número errado de argumentos :(")
             exit(1)
 
+        # Coleta os argumentos passados na execução, via argv
         self.queue_type = argv[1]
         self.num_customers = int(argv[2])
         self.rho = float(argv[3])
         self.seed = int(argv[4]) if len(argv)-1 >= 4 else None
 
-        print(f"Queue type: {self.queue_type}")
+        print(f"Tipo de fila: {self.queue_type}")
         print(f"Num fregueses: {self.num_customers}")
         print(f"Rho: {self.rho}")
-        print(f"seed: {self.seed}\n")
+        print(f"Semente: {self.seed}\n")
 
         self.time = 0
         self.current_client = None   # current_client indica o cliente atualmente em execução
@@ -56,18 +57,13 @@ class Simulator:
         else:
             self.event_list.insert(Event(self.next_departure(), event_type))
 
-    def run(self, client, batch: int = 0) -> Tuple[StatsCollector, int, Client]:
+    def run(self, client: Client, batch: int = 0) -> Tuple[StatsCollector, int, Client]:
         self.stats_collector = StatsCollector()
         self.time = 0
         stable_departures = 0
         total_departures = 0
         id = 0
-
         state = Phase.Stable
-        # Médias relativas à fase transiente
-        total_departure_time = 0
-        avg_departure_time_samples = 0
-        avg_departure_times = []
 
         # Calcula a primeira chegada antes do loop
         if batch == 0:
@@ -92,7 +88,8 @@ class Simulator:
                 if self.current_client is None:
                     if(environ.get("DEBUG") == "true"):
                         print(
-                            f"Entrou o id {id} no tempo {round(self.time, 3)} - FILA DE ESPERA VAZIA")
+                            f"Entrou o id {id} no tempo {round(self.time, 3)} - FILA DE ESPERA VAZIA"
+                        )
 
                     # Calcula a saída do cliente que acabou de chegar
                     self.add_event(EventType.Departure)
@@ -104,7 +101,9 @@ class Simulator:
                 else:
                     if(environ.get("DEBUG") == "true"):
                         print(
-                            f"Entrou o id {id} no tempo {round(self.time, 3)} - Encontrou {self.queue.length()} pessoas na fila de espera")
+                            f"Entrou o id {id} no tempo {round(self.time, 3)} "
+                            f"- Encontrou {self.queue.length()} pessoas na fila de espera"
+                        )
                     self.queue.add(Client(id, self.time, batch))
 
                 # Se o event sendo tratado é uma chegada, calcula o tempo da próxima chegada
@@ -144,7 +143,9 @@ class Simulator:
                     self.add_event(EventType.Departure)
                     if(environ.get("DEBUG") == "true"):
                         print(
-                            f"Cliente {self.current_client.id} entrou em execução no tempo {round(self.time, 3)}\n")
+                            f"Cliente {self.current_client.id} entrou em execução"
+                            f" no tempo {round(self.time, 3)}\n"
+                        )
 
                 # Caso onde após saída, o sistema fica vazio
                 else:
@@ -163,10 +164,10 @@ class Simulator:
                 # número de saídas durante a fase transiente
                 if state == Phase.Transient:
                     if (self.rho <= 0.2 and total_departures >= 150000) or \
-                        (0.2 < self.rho <= 0.4 and total_departures >= 152000) or \
-                        (0.4 < self.rho <= 0.6 and total_departures >= 160000) or \
-                        (0.6 < self.rho <= 0.8 and total_departures >= 205000) or \
-                        (self.rho > 0.8 and total_departures >= 303000):
+                            (0.2 < self.rho <= 0.4 and total_departures >= 152000) or \
+                            (0.4 < self.rho <= 0.6 and total_departures >= 160000) or \
+                            (0.6 < self.rho <= 0.8 and total_departures >= 205000) or \
+                            (self.rho > 0.8 and total_departures >= 303000):
                         state = Phase.Stable
 
 

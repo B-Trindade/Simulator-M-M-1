@@ -26,6 +26,8 @@ python3 .\src\simulator.py fcfs 400 0.6 1
 python3 .\src\simulator.py lcfs 200 0.2
 ```
 
+---
+
 ### Como rodar a análise das estatísticas geradas
 
 Ao rodar o simulador, será gerado um arquivo com nome equivalente ao seguinte padrão:
