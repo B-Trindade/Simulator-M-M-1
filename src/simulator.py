@@ -19,6 +19,7 @@ class Simulator:
     def __init__(self, argv: List):
         if len(argv)-1 not in (3, 4):
             print("Número errado de argumentos :(")
+            print("Os argumentos passados devem ser: [tipo de fila] [num fregueses] [rho] [semente (opcional)]")
             exit(1)
 
         # Coleta os argumentos passados na execução, via argv
@@ -186,14 +187,13 @@ if __name__ == "__main__":
     file_name = f"results_{'-'.join(argv[1:])}".replace('.', ',')
     with open(f"data/{file_name}.csv", "w") as file:
         client = None
-        file.write("Batch, E[W], E[Nq], E[Ns]\n")
+        file.write("Batch,E[W],E[Nq]\n")
         while next_batch < max_batches:
             stats, next_batch, client = a.run(client, batch=next_batch)
             # print(f"\n\nCURRENT BATCH: {next_batch}")
             # print(f"E[W]: {round(stats.get_average_wait(), 3)}")
             # print(f"E[Nq]: {round(stats.get_average_queue_size(), 3)}")
-            # print(f"E[Ns]: {round(stats.get_average_utilization(), 3)}\n")
-
+            
             # print("Little:")
             # print(f"E[Nq] = λE[W]")
             # print(
@@ -202,10 +202,7 @@ if __name__ == "__main__":
             #     f"{round(stats.get_average_queue_size(), 3)} = {round(float(argv[3])*stats.get_average_wait(), 3)}\n")
             total_wait += stats.get_average_wait()
             total_queue += stats.get_average_queue_size()
-            file.write(
-                f"{next_batch},{stats.get_average_wait()},"
-                f"{stats.get_average_queue_size()},{stats.get_average_utilization()}\n"
-            )
+            file.write(f"{next_batch},{stats.get_average_wait()},{stats.get_average_queue_size()}\n")
 
     print("Médias das rodadas:")
     print(f"E[W] = {round(total_wait/max_batches, 3)}")
