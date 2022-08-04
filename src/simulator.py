@@ -1,5 +1,5 @@
 from enum import Enum
-from utils.random_generator import Exponential
+from utils.random_generator import Deterministic, Exponential
 from utils.event_list import EventList, Event, EventType
 from utils.stats_collector import Client, StatsCollector
 from queues.fcfs import FCFSQueue
@@ -18,7 +18,7 @@ class Phase(Enum):
 
 
 class Simulator:
-    def __init__(self, argv: List):
+    def __init__(self, argv: List, deterministic: bool = False):
         if len(argv)-1 not in (3, 4):
             print("Número errado de argumentos :(")
             print(
@@ -44,9 +44,17 @@ class Simulator:
 
         self.queue = FCFSQueue() if self.queue_type.lower() == "fcfs" else LCFSQueue()
 
-        self.arrival_generator = Exponential(
-            self.seed, self.rho)
-        self.departure_generator = Exponential(self.seed, 1)
+        # Dependendo do parâmetro passado para o construtor, os geradores de
+        # chegadas e saídas podem ser determinísticas (deterministic == true)
+        # ou exponenciais (caso contrário)
+        if deterministic:
+            self.arrival_generator = Deterministic(self.seed, self.rho)
+            self.departure_generator = Deterministic(self.seed, 1)
+        else:
+            self.arrival_generator = Exponential(
+                self.seed, self.rho)
+            self.departure_generator = Exponential(self.seed, 1)
+
 
     def next_arrival(self) -> float:
         return self.time + self.arrival_generator.next()
@@ -172,14 +180,14 @@ class Simulator:
                             (self.rho > 0.8 and total_departures >= 303000):
                         state = Phase.Stable
                         print(
-                            f"Sistema saiu da fase transiente após {total_departures} saídas.")
+                            f"Sistema saiu da fase transiente após {total_departures} saídas.\n")
 
         return self.stats_collector, batch+1, self.current_client
 
 
 if __name__ == "__main__":
     inicio = datetime.now()
-    a = Simulator(argv)
+    a = Simulator(argv, deterministic=False) # Trocar deterministic=True para rodar em modo determinístico
     next_batch = 0
     max_batches = 3200  # Número de rodadas a serem executadas pelo método batch
 
