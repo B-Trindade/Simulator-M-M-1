@@ -9,6 +9,8 @@ from os import environ
 from typing import List, Tuple
 from datetime import datetime
 
+DEBUG = environ.get("DEBUG") == "true"
+
 
 class Phase(Enum):
     Transient = 0
@@ -19,7 +21,8 @@ class Simulator:
     def __init__(self, argv: List):
         if len(argv)-1 not in (3, 4):
             print("Número errado de argumentos :(")
-            print("Os argumentos passados devem ser: [tipo de fila] [num fregueses] [rho] [semente (opcional)]")
+            print(
+                "Os argumentos passados devem ser: [tipo de fila] [num fregueses] [rho] [semente (opcional)]")
             exit(1)
 
         # Coleta os argumentos passados na execução, via argv
@@ -87,7 +90,7 @@ class Simulator:
 
                 # Se a fila estiver vazia, chegada vai direto para execução
                 if self.current_client is None:
-                    if(environ.get("DEBUG") == "true"):
+                    if DEBUG:
                         print(
                             f"Entrou o id {id} no tempo {round(self.time, 3)} - FILA DE ESPERA VAZIA"
                         )
@@ -100,7 +103,7 @@ class Simulator:
 
                 # Se não, insere na fila de espera para ser executado no futuro
                 else:
-                    if(environ.get("DEBUG") == "true"):
+                    if DEBUG:
                         print(
                             f"Entrou o id {id} no tempo {round(self.time, 3)} "
                             f"- Encontrou {self.queue.length()} pessoas na fila de espera"
@@ -124,10 +127,8 @@ class Simulator:
                 # NOTA: Este valor equivale a rho (ρ)
                 if leaving_client.batch_id == batch and state == Phase.Stable:
                     stable_departures += 1
-                    self.stats_collector.update_utilization(
-                        self.queue.length())
 
-                if environ.get("DEBUG") == "true":
+                if DEBUG:
                     print(
                         f"Saiu o id {leaving_client.id} no tempo {round(leaving_client.exit_time, 3)}")
                     print(f"Entry - {round(leaving_client.entry_time, 3)}")
@@ -142,7 +143,7 @@ class Simulator:
 
                     # Calcula o tempo da próxima saída
                     self.add_event(EventType.Departure)
-                    if(environ.get("DEBUG") == "true"):
+                    if DEBUG:
                         print(
                             f"Cliente {self.current_client.id} entrou em execução"
                             f" no tempo {round(self.time, 3)}\n"
@@ -151,7 +152,7 @@ class Simulator:
                 # Caso onde após saída, o sistema fica vazio
                 else:
                     self.current_client = None
-                    if(environ.get("DEBUG") == "true"):
+                    if DEBUG:
                         print()
 
                 # Coleção de dados de saída
@@ -170,7 +171,8 @@ class Simulator:
                             (0.6 < self.rho <= 0.8 and total_departures >= 205000) or \
                             (self.rho > 0.8 and total_departures >= 303000):
                         state = Phase.Stable
-
+                        print(
+                            f"Sistema saiu da fase transiente após {total_departures} saídas.")
 
         return self.stats_collector, batch+1, self.current_client
 
@@ -179,21 +181,26 @@ if __name__ == "__main__":
     inicio = datetime.now()
     a = Simulator(argv)
     next_batch = 0
-    max_batches = 3200 # Número de rodadas a serem executadas pelo método batch
+    max_batches = 3200  # Número de rodadas a serem executadas pelo método batch
 
     total_wait = 0
     total_queue = 0
 
+    total_wait_variance = 0
+    total_queue_variance = 0
+
     file_name = f"results_{'-'.join(argv[1:])}".replace('.', ',')
     with open(f"data/{file_name}.csv", "w") as file:
         client = None
-        file.write("Batch,E[W],E[Nq]\n")
+        file.write("Batch,E[W],V[W],E[Nq],V[Nq]\n")
         while next_batch < max_batches:
             stats, next_batch, client = a.run(client, batch=next_batch)
             # print(f"\n\nCURRENT BATCH: {next_batch}")
             # print(f"E[W]: {round(stats.get_average_wait(), 3)}")
+            # print(f"V(W): {round(stats.get_variance_wait(), 3)}")
             # print(f"E[Nq]: {round(stats.get_average_queue_size(), 3)}")
-            
+            # print(f"V(Nq): {round(stats.get_variance_queue_size(), 3)}\n")
+
             # print("Little:")
             # print(f"E[Nq] = λE[W]")
             # print(
@@ -201,12 +208,17 @@ if __name__ == "__main__":
             # print(
             #     f"{round(stats.get_average_queue_size(), 3)} = {round(float(argv[3])*stats.get_average_wait(), 3)}\n")
             total_wait += stats.get_average_wait()
+            total_wait_variance += stats.get_variance_wait()
             total_queue += stats.get_average_queue_size()
-            file.write(f"{next_batch},{stats.get_average_wait()},{stats.get_average_queue_size()}\n")
+            total_queue_variance += stats.get_variance_queue_size()
+            file.write(f"{next_batch},{stats.get_average_wait()},{stats.get_variance_wait()},"
+                       f"{stats.get_average_queue_size()},{stats.get_variance_queue_size()}\n")
 
     print("Médias das rodadas:")
     print(f"E[W] = {round(total_wait/max_batches, 3)}")
-    print(f"E[Nq] = {round(total_queue/max_batches, 3)}\n")
+    print(f"V(W) = {round(total_wait_variance/max_batches, 3)}")
+    print(f"E[Nq] = {round(total_queue/max_batches, 3)}")
+    print(f"V(Nq) = {round(total_queue_variance/max_batches, 3)}\n")
 
     print("Little:")
     print(f"E[Nq] = λE[W]")
