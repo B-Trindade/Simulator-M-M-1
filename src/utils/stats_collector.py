@@ -24,6 +24,8 @@ class StatsCollector:
         self.total_queue_size_squared = 0
         self.total_samples = 0
 
+    # Função para coletar amostra. Atualiza valores relevantes e incrementa
+    # o número total de coletas.
     def update_departures(self, client: Client, queue_size: int) -> None:
         self.total_wait += client.wait_time
         self.total_wait_squared += client.wait_time**2
@@ -33,14 +35,18 @@ class StatsCollector:
 
         self.total_samples += 1
 
+    # Calcula E[W] da rodada
     def get_average_wait(self) -> float:
         return self.total_wait/self.total_samples
 
+    # Calcula V[W] da rodada
     def get_variance_wait(self) -> float:
         return self.total_wait_squared/(self.total_samples-1) - self.total_wait**2/(self.total_samples*(self.total_samples-1))
 
+    # Calcula E[Nq] da rodada
     def get_average_queue_size(self) -> float:
         return self.total_queue_size/self.total_samples
 
+    # Calcula V[Nq] da rodada
     def get_variance_queue_size(self) -> float:
         return self.total_queue_size_squared/(self.total_samples-1) - self.total_queue_size**2/(self.total_samples*(self.total_samples-1))
